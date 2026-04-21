@@ -1,0 +1,127 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment/secrets
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Dependencies
+node_modules/
+vendor/
+frontend/node_modules/
+
+# Build/output
+dist/
+build/
+out/
+coverage/
+.tmp/
+temp/
+frontend/dist/
+frontend/.vite/
+backend/exports/charts/
+
+# Python
+__pycache__/
+*.py[cod]
+.python-version
+.venv311/
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+__pypackages__/
+
+# Python (project-specific)
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+backend/venv/
+backend/ENV/
+backend/env/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/pandasai.log
+
+# Uploaded/exported data (private/runtime)
+backend/data/uploads/
+backend/data/uploads/**
+backend/exports/
+backend/exports/**
+
+# Local package artifacts
+tmp_pkg/
+*.whl
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Tool caches
+.cache/
+.eslintcache
+.parcel-cache/
+.sass-cache/
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+
+# Frontend framework/tooling
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+frontend/coverage/
+frontend/.turbo/
+frontend/.next/
+frontend/.nuxt/
+frontend/.svelte-kit/
+
+# Backend local env file
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Power BI temp/backups
+*.pbix.autosave
+*.tmp.pbix
