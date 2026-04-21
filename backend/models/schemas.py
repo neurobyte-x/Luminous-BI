@@ -29,6 +29,7 @@ class AnalyzeResponse(BaseModel):
     insights: list[str]
     charts: list[ChartSpec]
     data: list[dict[str, Any]]
+    sql_query: str
 
 
 class HistoryItem(BaseModel):

@@ -381,16 +381,7 @@ export function QueryExplorerPage() {
                 </CardHeader>
                 <CardContent>
                   <SQLView
-                    sql={[
-                      'Natural language query:',
-                      query,
-                      '',
-                      'Dataset ID:',
-                      activeDatasetId || 'N/A',
-                      '',
-                      'Summary:',
-                      analysis?.summary || 'N/A',
-                    ].join('\n')}
+                    sql={analysis?.sql_query || 'SELECT *\nFROM uploaded_data\nLIMIT 200;'}
                   />
                 </CardContent>
               </Card>

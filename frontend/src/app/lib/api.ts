@@ -23,6 +23,7 @@ export type AnalyzeResponse = {
   insights: string[];
   charts: ChartSpec[];
   data: Array<Record<string, unknown>>;
+  sql_query: string;
 };
 
 export type HistoryItem = {

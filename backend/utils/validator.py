@@ -58,6 +58,17 @@ def _safe_default_chart(columns: list[str]) -> dict[str, str]:
     return {"type": "bar", "x": x, "y": y}
 
 
+def _fallback_sql_query(columns: list[str], query: str) -> str:
+    if not columns:
+        return "SELECT *\nFROM uploaded_data\nLIMIT 200;"
+
+    selected_columns = ", ".join(columns[:6])
+    if "count" in query.lower():
+        return "SELECT COUNT(*) AS row_count\nFROM uploaded_data;"
+
+    return f"SELECT {selected_columns}\nFROM uploaded_data\nLIMIT 200;"
+
+
 def validate_llm_payload(
     payload: dict[str, Any],
     columns: list[str],
@@ -100,11 +111,16 @@ def validate_llm_payload(
     if not validate_pandas_prompt(pandas_prompt):
         pandas_prompt = f"Return a compact table (max 200 rows) to answer this query: {query}"
 
+    sql_query = str(payload.get("sql_query", "")).strip()
+    if not sql_query:
+        sql_query = _fallback_sql_query(columns=columns, query=query)
+
     return {
         "summary": summary,
         "insights": insights,
         "charts": validated_charts,
         "pandas_prompt": pandas_prompt,
+        "sql_query": sql_query,
     }
 
 
@@ -117,4 +133,5 @@ def build_fallback_analysis(query: str, columns: list[str]) -> dict[str, Any]:
         ],
         "charts": [_safe_default_chart(columns)],
         "pandas_prompt": f"Return a compact table (max 200 rows) to answer this query: {query}",
+        "sql_query": _fallback_sql_query(columns=columns, query=query),
     }

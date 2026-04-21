@@ -39,8 +39,7 @@ def _load_available_gemini_models() -> set[str]:
 
 def _gemini_model_candidates() -> list[str]:
     configured = (settings.gemini_model or "").strip()
-    fallback_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-    raw_candidates = [configured, *fallback_models]
+    raw_candidates = [configured or "gemini-2.5-flash"]
 
     candidates: list[str] = []
     seen: set[str] = set()
@@ -71,18 +70,25 @@ def _gemini_model_candidates() -> list[str]:
 def _build_google_gemini_llm() -> Any:
     try:
         from pandasai.llm.google_gemini import GoogleGemini
-    except Exception:
+        import google.generativeai as genai
+    except Exception as exc:
+        logger.warning("PandasAI GoogleGemini connector import failed: %s", exc)
         return None
 
     for model_name in _gemini_model_candidates():
         original_model = getattr(GoogleGemini, "model", "models/gemini-pro")
-
-        # GoogleGemini configures GenerativeModel before kwargs are applied.
-        GoogleGemini.model = model_name
         try:
-            llm = GoogleGemini(api_key=settings.gemini_api_key)
+            # pandasai 2.x initializes the client from class-level model, so set it before init.
+            GoogleGemini.model = model_name
+            llm = GoogleGemini(api_key=settings.gemini_api_key, model=model_name)
+
+            # Ensure the instance and bound GenerativeModel both use the configured model.
+            llm.model = model_name
+            genai.configure(api_key=settings.gemini_api_key)
+            llm.google_gemini = genai.GenerativeModel(model_name=model_name)
             return llm
-        except Exception:
+        except Exception as exc:
+            logger.warning("GoogleGemini init failed for model '%s': %s", model_name, exc)
             continue
         finally:
             GoogleGemini.model = original_model
@@ -103,7 +109,8 @@ def _get_smart_dataframe(dataframe: pd.DataFrame) -> Any:
             return SmartDataframe(dataframe.copy(), config={"llm": llm, "enable_cache": False})
 
         logger.warning(
-            "PandasAI Gemini connector unavailable for configured models. Falling back to pandas output."
+            "PandasAI Gemini connector unavailable for configured models (%s). Falling back to pandas output.",
+            settings.gemini_model,
         )
         return None
 

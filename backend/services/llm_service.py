@@ -29,6 +29,7 @@ Return STRICT JSON only with this exact schema:
 {{
   "summary": "short answer",
   "insights": ["insight 1", "insight 2"],
+  "sql_query": "SQL query that approximates the natural language question",
   "charts": [
     {{
       "type": "line | bar | pie",
@@ -46,6 +47,7 @@ Rules:
 3) Use dataset column names exactly.
 4) Max 3 charts.
 5) pandas_prompt must not include OS/system calls.
+6) sql_query must be valid SQL text and should reference a table named uploaded_data.
 """.strip()
 
 
