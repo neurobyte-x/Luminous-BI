@@ -12,6 +12,16 @@ class UploadResponse(BaseModel):
     rows: int
 
 
+class UploadedDatasetItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    dataset_id: str
+    filename: str
+    columns: list[str]
+    rows: int
+    created_at: datetime
+
+
 class AnalyzeRequest(BaseModel):
     query: str = Field(min_length=1)
     dataset_id: str = Field(min_length=1)

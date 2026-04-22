@@ -5,6 +5,13 @@ import { Save, Sparkles, ThumbsUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { LoadingState } from '../components/loading-state';
@@ -22,6 +29,8 @@ import {
   type AnalyzeResponse,
   type ChartSpec,
   type DashboardItem,
+  fetchUploadedDatasets,
+  type UploadedDatasetItem,
 } from '../lib/api';
 import { getActiveDataset, setActiveDataset, setLastAnalysis } from '../lib/storage';
 
@@ -86,9 +95,59 @@ export function QueryExplorerPage() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
   const [isSavingDashboard, setIsSavingDashboard] = useState(false);
+  const [availableDatasets, setAvailableDatasets] = useState<UploadedDatasetItem[]>([]);
+  const [isLoadingDatasets, setIsLoadingDatasets] = useState(false);
   const [activeDatasetId, setActiveDatasetId] = useState<string | null>(
     () => getActiveDataset()?.datasetId ?? null,
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDatasets = async () => {
+      try {
+        setIsLoadingDatasets(true);
+        const datasets = await fetchUploadedDatasets();
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableDatasets(datasets);
+
+        if (!datasets.length) {
+          return;
+        }
+
+        const preferredDatasetId = activeDatasetId || getActiveDataset()?.datasetId;
+        const preferredDataset = preferredDatasetId
+          ? datasets.find((item) => item.dataset_id === preferredDatasetId)
+          : null;
+        const selectedDataset = preferredDataset ?? datasets[0];
+
+        setActiveDatasetId(selectedDataset.dataset_id);
+        setActiveDataset({
+          datasetId: selectedDataset.dataset_id,
+          filename: selectedDataset.filename,
+          columns: selectedDataset.columns,
+          rows: selectedDataset.rows,
+        });
+      } catch (error) {
+        if (isMounted) {
+          toast.error(error instanceof Error ? error.message : 'Failed to load your uploaded datasets.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingDatasets(false);
+        }
+      }
+    };
+
+    void loadDatasets();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAnalyze = useCallback(
     async (queryText?: string, datasetIdOverride?: string) => {
@@ -228,9 +287,45 @@ export function QueryExplorerPage() {
         <p className="mt-2 text-muted-foreground">
           Ask questions about your data in natural language
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Active dataset: {activeDatasetId || 'Not selected'}
-        </p>
+        <div className="mt-4 max-w-xl space-y-2">
+          <p className="text-sm text-muted-foreground">Choose CSV file</p>
+          <Select
+            value={activeDatasetId ?? undefined}
+            onValueChange={(datasetId) => {
+              const selected = availableDatasets.find((item) => item.dataset_id === datasetId);
+              setActiveDatasetId(datasetId);
+
+              if (selected) {
+                setActiveDataset({
+                  datasetId: selected.dataset_id,
+                  filename: selected.filename,
+                  columns: selected.columns,
+                  rows: selected.rows,
+                });
+              } else {
+                setActiveDataset({ datasetId });
+              }
+            }}
+            disabled={isLoadingDatasets || availableDatasets.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue
+                placeholder={
+                  isLoadingDatasets
+                    ? 'Loading uploaded datasets...'
+                    : 'No uploaded datasets found. Upload a CSV first.'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {availableDatasets.map((dataset) => (
+                <SelectItem key={dataset.dataset_id} value={dataset.dataset_id}>
+                  {dataset.filename} ({dataset.rows} rows)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Input Section */}

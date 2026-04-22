@@ -18,6 +18,14 @@ export type UploadResponse = {
   rows: number;
 };
 
+export type UploadedDatasetItem = {
+  dataset_id: string;
+  filename: string;
+  columns: string[];
+  rows: number;
+  created_at: string;
+};
+
 export type AnalyzeResponse = {
   summary: string;
   insights: string[];
@@ -109,6 +117,10 @@ export async function uploadDataset(file: File): Promise<UploadResponse> {
     method: 'POST',
     body: formData,
   });
+}
+
+export async function fetchUploadedDatasets(): Promise<UploadedDatasetItem[]> {
+  return request<UploadedDatasetItem[]>('/upload');
 }
 
 export async function signup(payload: {

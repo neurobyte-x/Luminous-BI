@@ -44,7 +44,7 @@ export function LandingPage() {
           </motion.div>
           
           <h1 className="mb-6 text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">
-            Ask Your Data Anything
+            Ask Your Data Anything 
           </h1>
           <p className="mb-8 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
             AI-powered dashboards instantly. Transform your data into insights with natural language queries.
