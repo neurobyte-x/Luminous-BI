@@ -1,6 +1,6 @@
 ﻿# Luminous BI
 
-Luminous BI is a full-stack conversational analytics platform. Users upload CSV files, ask natural-language business questions, and get structured analysis with summaries, charts, SQL-like query output, history, and reusable dashboards.
+Luminous BI is a full-stack conversational analytics platform. Users upload CSV files, ask natural-language business questions, and get structured analysis with summaries, charts, SQL-like query output, history, reusable dashboards, ranked decision recommendations, and plain-language what-if simulations.
 
 ## Project Goals
 
@@ -8,6 +8,7 @@ Luminous BI is a full-stack conversational analytics platform. Users upload CSV 
 - Provide a modern BI user experience with auth and saved work
 - Keep backend API modular and deployment-ready
 - Support AI-enhanced analysis with safe fallbacks
+- Move from descriptive analytics into recommended actions and scenario planning
 
 ## Monorepo Structure
 
@@ -60,12 +61,15 @@ Frontend:
    - chart specs
    - data rows
    - sql_query text
-6. Query and summary are recorded in history.
-7. User can save results as dashboards and fetch/delete later.
+6. Query Explorer can generate Decision Copilot output: top 3 ranked actions with expected impact and confidence.
+7. Query Explorer can run plain-language What-if simulation and return projected KPI ranges.
+8. Query and summary are recorded in history.
+9. User can save results as dashboards and fetch/delete later.
 
 Important runtime behavior:
 - Uploaded DataFrames are cached in process memory for analysis.
-- After backend restart, dataset cache resets and CSV must be re-uploaded.
+- Uploaded CSV files are persisted on disk under a user-scoped directory and can be loaded again after backend restart.
+- Query Explorer loads the authenticated user's uploaded datasets and allows selecting which CSV to analyze.
 
 ## API Surface
 
@@ -83,12 +87,20 @@ Authenticated endpoints (Authorization: Bearer <token>):
 - POST /auth/signout
 - GET /auth/me
 - POST /upload
+- GET /upload
 - POST /analyze
+- POST /decision-copilot
+- POST /what-if
 - GET /history
 - POST /dashboard
 - GET /dashboard
 - GET /dashboard/{dashboard_id}
 - DELETE /dashboard/{dashboard_id}
+
+New endpoint behavior:
+- GET /upload returns uploaded datasets for the current user only.
+- POST /decision-copilot returns ranked action recommendations for a selected dataset and context query.
+- POST /what-if parses a plain-language scenario and returns projected KPI ranges with assumptions.
 
 ## Environment Variables
 
@@ -190,7 +202,8 @@ Main routes include:
 UI behavior:
 - Protected app routes require auth
 - Token and user state are persisted client-side
-- Query explorer renders charts, tabular data, insights, and SQL output
+- Query explorer supports dataset selection from previously uploaded CSVs
+- Query explorer renders charts, tabular data, insights, SQL output, Decision Copilot actions, and What-if projections
 
 ## Build and Deployment
 
@@ -231,7 +244,12 @@ Backend exits immediately:
 
 Analyze fails or returns fallback:
 - Verify GEMINI_API_KEY and GEMINI_MODEL.
-- Confirm dataset_id was produced by a recent upload in current backend process.
+- Confirm dataset_id belongs to the currently authenticated user.
+
+Decision Copilot or What-if returns 400:
+- Check that the selected dataset has numeric columns.
+- For What-if, include a percentage in the prompt (for example: increase price by 4%).
+- If using segment conditions, ensure the referenced segment value exists in dataset rows.
 
 Frontend npm run dev fails:
 - Ensure dependencies installed with npm install inside frontend.
