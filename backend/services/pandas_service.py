@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any
 
+import duckdb
 import pandas as pd
 
 from config import settings
@@ -10,6 +11,33 @@ from utils.validator import validate_pandas_prompt
 
 logger = logging.getLogger(__name__)
 _AVAILABLE_GEMINI_MODELS: set[str] | None = None
+
+
+def _is_safe_select_sql(sql_query: str) -> bool:
+    normalized = (sql_query or "").strip().lower().rstrip(";")
+    if not normalized:
+        return False
+
+    if not (normalized.startswith("select") or normalized.startswith("with")):
+        return False
+
+    blocked_tokens = ["insert ", "update ", "delete ", "drop ", "alter ", "create ", "attach ", "copy "]
+    return not any(token in normalized for token in blocked_tokens)
+
+
+def execute_sql_query(dataframe: pd.DataFrame, sql_query: str) -> pd.DataFrame:
+    if not _is_safe_select_sql(sql_query):
+        raise ValueError("Generated SQL is not a safe SELECT query.")
+
+    bounded_query = f"SELECT * FROM ({sql_query.rstrip(';')}) AS q LIMIT 500"
+    try:
+        with duckdb.connect(database=":memory:") as connection:
+            connection.register("uploaded_data", dataframe)
+            result = connection.execute(bounded_query).df()
+            connection.unregister("uploaded_data")
+        return result
+    except Exception as exc:
+        raise ValueError(f"Unable to execute generated SQL: {exc}") from exc
 
 
 def _load_available_gemini_models() -> set[str]:

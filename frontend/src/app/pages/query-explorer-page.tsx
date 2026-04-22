@@ -16,7 +16,13 @@ import { DataTableView } from '../components/data-table-view';
 import { SQLView } from '../components/sql-view';
 import { FeedbackModal } from '../components/feedback-modal';
 import { exampleQueries } from '../data/mock-data';
-import { analyzeDataset, createDashboard, type AnalyzeResponse, type ChartSpec } from '../lib/api';
+import {
+  analyzeDataset,
+  createDashboard,
+  type AnalyzeResponse,
+  type ChartSpec,
+  type DashboardItem,
+} from '../lib/api';
 import { getActiveDataset, setActiveDataset, setLastAnalysis } from '../lib/storage';
 
 type QueryState = 'input' | 'loading' | 'results';
@@ -130,7 +136,28 @@ export function QueryExplorerPage() {
   );
 
   useEffect(() => {
-    const routeState = (location.state || {}) as { query?: string; datasetId?: string };
+    const routeState = (location.state || {}) as {
+      query?: string;
+      datasetId?: string;
+      savedDashboard?: DashboardItem;
+    };
+
+    if (routeState.savedDashboard) {
+      const saved = routeState.savedDashboard;
+      setQuery(saved.query);
+      setActiveDatasetId(saved.dataset_id);
+      setActiveDataset({ datasetId: saved.dataset_id });
+      setAnalysis({
+        summary: saved.summary || 'Saved dashboard',
+        insights: saved.insights || [],
+        charts: saved.charts || [],
+        data: saved.data || [],
+        sql_query: saved.sql_query || 'SELECT *\nFROM uploaded_data\nLIMIT 200;',
+      });
+      setState('results');
+      return;
+    }
+
     if (!routeState.query && !routeState.datasetId) {
       return;
     }
@@ -179,6 +206,10 @@ export function QueryExplorerPage() {
         query: query.trim(),
         dataset_id: activeDatasetId,
         charts: analysis.charts,
+        summary: analysis.summary,
+        insights: analysis.insights,
+        data: analysis.data,
+        sql_query: analysis.sql_query,
       });
 
       toast.success('Dashboard saved.');

@@ -110,7 +110,7 @@ export function SavedDashboardsPage() {
                     className="flex-1 gap-2"
                     onClick={() =>
                       navigate('/app/query', {
-                        state: { query: dashboard.query, datasetId: dashboard.dataset_id },
+                        state: { savedDashboard: dashboard },
                       })
                     }
                   >

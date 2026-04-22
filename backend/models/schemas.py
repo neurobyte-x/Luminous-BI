@@ -47,6 +47,10 @@ class DashboardCreate(BaseModel):
     query: str = Field(min_length=1)
     dataset_id: str = Field(min_length=1)
     charts: list[ChartSpec] = Field(default_factory=list)
+    summary: str = ""
+    insights: list[str] = Field(default_factory=list)
+    data: list[dict[str, Any]] = Field(default_factory=list)
+    sql_query: str = ""
 
 
 class DashboardResponse(BaseModel):
@@ -57,6 +61,10 @@ class DashboardResponse(BaseModel):
     query: str
     dataset_id: str
     charts: list[dict[str, Any]]
+    summary: str = ""
+    insights: list[str] = Field(default_factory=list)
+    data: list[dict[str, Any]] = Field(default_factory=list)
+    sql_query: str = ""
     created_at: datetime
 
 

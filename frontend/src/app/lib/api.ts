@@ -40,6 +40,10 @@ export type DashboardItem = {
   query: string;
   dataset_id: string;
   charts: ChartSpec[];
+  summary: string;
+  insights: string[];
+  data: Array<Record<string, unknown>>;
+  sql_query: string;
   created_at: string;
 };
 
@@ -184,6 +188,10 @@ export async function createDashboard(payload: {
   query: string;
   dataset_id: string;
   charts: ChartSpec[];
+  summary: string;
+  insights: string[];
+  data: Array<Record<string, unknown>>;
+  sql_query: string;
 }): Promise<DashboardItem> {
   return request<DashboardItem>('/dashboard', {
     method: 'POST',
