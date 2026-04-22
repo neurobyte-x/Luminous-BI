@@ -42,6 +42,46 @@ class AnalyzeResponse(BaseModel):
     sql_query: str
 
 
+class DecisionCopilotRequest(BaseModel):
+    dataset_id: str = Field(min_length=1)
+    context_query: str = Field(min_length=1)
+
+
+class DecisionAction(BaseModel):
+    rank: int
+    title: str
+    rationale: str
+    expected_impact: str
+    confidence: int = Field(ge=0, le=100)
+
+
+class DecisionCopilotResponse(BaseModel):
+    headline: str
+    actions: list[DecisionAction]
+
+
+class WhatIfRequest(BaseModel):
+    dataset_id: str = Field(min_length=1)
+    scenario_prompt: str = Field(min_length=3)
+
+
+class WhatIfProjection(BaseModel):
+    metric: str
+    baseline: float
+    projected: float
+    low: float
+    high: float
+    unit: str
+
+
+class WhatIfResponse(BaseModel):
+    scenario: str
+    assumptions: list[str]
+    projections: list[WhatIfProjection]
+    sample_size: int
+    matched_filters: dict[str, str] = Field(default_factory=dict)
+
+
 class HistoryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

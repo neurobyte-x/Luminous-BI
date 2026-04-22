@@ -5,15 +5,50 @@ from sqlalchemy import select
 
 from database import get_db
 from models.db_models import QueryHistory, UploadedDataset, UserAccount
-from models.schemas import AnalyzeRequest, AnalyzeResponse
+from models.schemas import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    DecisionAction,
+    DecisionCopilotRequest,
+    DecisionCopilotResponse,
+    WhatIfProjection,
+    WhatIfRequest,
+    WhatIfResponse,
+)
 from services.auth_service import get_current_user
 from services.chart_service import validate_charts
+from services.decision_service import build_decision_actions, parse_what_if_scenario, run_what_if_projection
 from services.llm_service import generate_analysis
 from services.pandas_service import dataframe_to_records, execute_sql_query
 from services.storage_service import get_dataframe, load_dataframe_from_path
 
 
 router = APIRouter()
+
+
+async def _load_user_dataset_dataframe(
+    dataset_id: str,
+    db: AsyncSession,
+    current_user: UserAccount,
+) -> pd.DataFrame:
+    dataset_result = await db.execute(
+        select(UploadedDataset).where(
+            UploadedDataset.dataset_id == dataset_id,
+            UploadedDataset.user_id == current_user.id,
+        )
+    )
+    uploaded_dataset = dataset_result.scalar_one_or_none()
+    if uploaded_dataset is None:
+        raise HTTPException(status_code=404, detail="Dataset not found for this user. Upload the CSV first.")
+
+    dataframe = get_dataframe(dataset_id)
+    if dataframe is None:
+        try:
+            dataframe = load_dataframe_from_path(dataset_id, uploaded_dataset.stored_path)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return dataframe
 
 
 def _is_generic_insight(insight: str) -> bool:
@@ -55,22 +90,11 @@ async def analyze_dataset(
     db: AsyncSession = Depends(get_db),
     current_user: UserAccount = Depends(get_current_user),
 ) -> AnalyzeResponse:
-    dataset_result = await db.execute(
-        select(UploadedDataset).where(
-            UploadedDataset.dataset_id == payload.dataset_id,
-            UploadedDataset.user_id == current_user.id,
-        )
+    dataframe = await _load_user_dataset_dataframe(
+        dataset_id=payload.dataset_id,
+        db=db,
+        current_user=current_user,
     )
-    uploaded_dataset = dataset_result.scalar_one_or_none()
-    if uploaded_dataset is None:
-        raise HTTPException(status_code=404, detail="Dataset not found for this user. Upload the CSV first.")
-
-    dataframe = get_dataframe(payload.dataset_id)
-    if dataframe is None:
-        try:
-            dataframe = load_dataframe_from_path(payload.dataset_id, uploaded_dataset.stored_path)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     columns = [str(column) for column in dataframe.columns.tolist()]
     analysis = generate_analysis(query=payload.query, columns=columns)
@@ -110,4 +134,62 @@ async def analyze_dataset(
         charts=charts,
         data=dataframe_to_records(response_dataframe),
         sql_query=str(analysis.get("sql_query", "")).strip(),
+    )
+
+
+@router.post("/decision-copilot", response_model=DecisionCopilotResponse)
+async def decision_copilot(
+    payload: DecisionCopilotRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserAccount = Depends(get_current_user),
+) -> DecisionCopilotResponse:
+    dataframe = await _load_user_dataset_dataframe(
+        dataset_id=payload.dataset_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    headline, actions = build_decision_actions(dataframe=dataframe, context_query=payload.context_query)
+    return DecisionCopilotResponse(
+        headline=headline,
+        actions=[
+            DecisionAction(
+                rank=index + 1,
+                title=action.title,
+                rationale=action.rationale,
+                expected_impact=action.expected_impact,
+                confidence=action.confidence,
+            )
+            for index, action in enumerate(actions)
+        ],
+    )
+
+
+@router.post("/what-if", response_model=WhatIfResponse)
+async def what_if_simulator(
+    payload: WhatIfRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserAccount = Depends(get_current_user),
+) -> WhatIfResponse:
+    dataframe = await _load_user_dataset_dataframe(
+        dataset_id=payload.dataset_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    try:
+        scenario = parse_what_if_scenario(prompt=payload.scenario_prompt, dataframe=dataframe)
+        projections, assumptions, matched_filters, sample_size = run_what_if_projection(
+            dataframe=dataframe,
+            scenario=scenario,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return WhatIfResponse(
+        scenario=payload.scenario_prompt,
+        assumptions=assumptions,
+        projections=[WhatIfProjection(**projection) for projection in projections],
+        sample_size=sample_size,
+        matched_filters=matched_filters,
     )

@@ -34,6 +34,36 @@ export type AnalyzeResponse = {
   sql_query: string;
 };
 
+export type DecisionAction = {
+  rank: number;
+  title: string;
+  rationale: string;
+  expected_impact: string;
+  confidence: number;
+};
+
+export type DecisionCopilotResponse = {
+  headline: string;
+  actions: DecisionAction[];
+};
+
+export type WhatIfProjection = {
+  metric: string;
+  baseline: number;
+  projected: number;
+  low: number;
+  high: number;
+  unit: string;
+};
+
+export type WhatIfResponse = {
+  scenario: string;
+  assumptions: string[];
+  projections: WhatIfProjection[];
+  sample_size: number;
+  matched_filters: Record<string, string>;
+};
+
 export type HistoryItem = {
   id: string;
   query: string;
@@ -177,6 +207,28 @@ export async function analyzeDataset(payload: {
   dataset_id: string;
 }): Promise<AnalyzeResponse> {
   return request<AnalyzeResponse>('/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchDecisionCopilot(payload: {
+  dataset_id: string;
+  context_query: string;
+}): Promise<DecisionCopilotResponse> {
+  return request<DecisionCopilotResponse>('/decision-copilot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function runWhatIf(payload: {
+  dataset_id: string;
+  scenario_prompt: string;
+}): Promise<WhatIfResponse> {
+  return request<WhatIfResponse>('/what-if', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

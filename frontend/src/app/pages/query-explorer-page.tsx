@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Save, Sparkles, ThumbsUp } from 'lucide-react';
+import { Save, Sparkles, ThumbsUp, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
+import { Input } from '../components/ui/input';
 import {
   Select,
   SelectContent,
@@ -26,11 +27,15 @@ import { exampleQueries } from '../data/mock-data';
 import {
   analyzeDataset,
   createDashboard,
+  fetchDecisionCopilot,
+  runWhatIf,
   type AnalyzeResponse,
   type ChartSpec,
+  type DecisionCopilotResponse,
   type DashboardItem,
   fetchUploadedDatasets,
   type UploadedDatasetItem,
+  type WhatIfResponse,
 } from '../lib/api';
 import { getActiveDataset, setActiveDataset, setLastAnalysis } from '../lib/storage';
 
@@ -95,6 +100,11 @@ export function QueryExplorerPage() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
   const [isSavingDashboard, setIsSavingDashboard] = useState(false);
+  const [decisionCopilot, setDecisionCopilot] = useState<DecisionCopilotResponse | null>(null);
+  const [isDecisionLoading, setIsDecisionLoading] = useState(false);
+  const [whatIfPrompt, setWhatIfPrompt] = useState('');
+  const [whatIfResult, setWhatIfResult] = useState<WhatIfResponse | null>(null);
+  const [isWhatIfLoading, setIsWhatIfLoading] = useState(false);
   const [availableDatasets, setAvailableDatasets] = useState<UploadedDatasetItem[]>([]);
   const [isLoadingDatasets, setIsLoadingDatasets] = useState(false);
   const [activeDatasetId, setActiveDatasetId] = useState<string | null>(
@@ -165,6 +175,8 @@ export function QueryExplorerPage() {
 
       try {
         setState('loading');
+        setDecisionCopilot(null);
+        setWhatIfResult(null);
         const response = await analyzeDataset({
           query: q,
           dataset_id: selectedDatasetId,
@@ -185,6 +197,19 @@ export function QueryExplorerPage() {
         if (!activeDatasetId) {
           setActiveDataset({ datasetId: selectedDatasetId });
           setActiveDatasetId(selectedDatasetId);
+        }
+
+        try {
+          setIsDecisionLoading(true);
+          const copilot = await fetchDecisionCopilot({
+            dataset_id: selectedDatasetId,
+            context_query: q,
+          });
+          setDecisionCopilot(copilot);
+        } catch (decisionError) {
+          toast.error(decisionError instanceof Error ? decisionError.message : 'Decision Copilot failed.');
+        } finally {
+          setIsDecisionLoading(false);
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Analysis failed.');
@@ -277,6 +302,33 @@ export function QueryExplorerPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to save dashboard.');
     } finally {
       setIsSavingDashboard(false);
+    }
+  };
+
+  const handleRunWhatIf = async () => {
+    const scenario = whatIfPrompt.trim();
+    if (!scenario) {
+      return;
+    }
+
+    const selectedDatasetId = activeDatasetId || getActiveDataset()?.datasetId;
+    if (!selectedDatasetId) {
+      toast.error('Select a dataset before running what-if simulation.');
+      return;
+    }
+
+    try {
+      setIsWhatIfLoading(true);
+      const response = await runWhatIf({
+        dataset_id: selectedDatasetId,
+        scenario_prompt: scenario,
+      });
+      setWhatIfResult(response);
+      toast.success('Scenario simulated successfully.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'What-if simulation failed.');
+    } finally {
+      setIsWhatIfLoading(false);
     }
   };
 
@@ -413,11 +465,13 @@ export function QueryExplorerPage() {
           </div>
 
           <Tabs defaultValue="charts" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-4">
+            <TabsList className="grid w-full max-w-4xl grid-cols-6">
               <TabsTrigger value="charts">📊 Charts</TabsTrigger>
               <TabsTrigger value="data">📋 Data</TabsTrigger>
               <TabsTrigger value="insights">💡 Insights</TabsTrigger>
               <TabsTrigger value="sql">🧾 SQL</TabsTrigger>
+              <TabsTrigger value="decision">🎯 Decision Copilot</TabsTrigger>
+              <TabsTrigger value="whatif">🧪 What-if</TabsTrigger>
             </TabsList>
 
             {/* Charts Tab */}
@@ -509,6 +563,105 @@ export function QueryExplorerPage() {
                   <SQLView
                     sql={analysis?.sql_query || 'SELECT *\nFROM uploaded_data\nLIMIT 200;'}
                   />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="decision">
+              <Card className="glass-effect">
+                <CardHeader>
+                  <CardTitle>Decision Copilot</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isDecisionLoading && (
+                    <p className="text-sm text-muted-foreground">Preparing ranked actions...</p>
+                  )}
+
+                  {!isDecisionLoading && decisionCopilot && (
+                    <>
+                      <p className="text-sm text-muted-foreground">{decisionCopilot.headline}</p>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        {decisionCopilot.actions.map((action) => (
+                          <Card key={action.rank} className="border-border/70">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base">#{action.rank} {action.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <p className="text-sm text-muted-foreground">{action.rationale}</p>
+                              <p className="text-sm">{action.expected_impact}</p>
+                              <p className="text-xs text-muted-foreground">Confidence: {action.confidence}%</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {!isDecisionLoading && !decisionCopilot && (
+                    <p className="text-sm text-muted-foreground">
+                      Run an analysis first to generate ranked actions.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="whatif">
+              <Card className="glass-effect">
+                <CardHeader>
+                  <CardTitle>What-if Simulator</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row">
+                    <Input
+                      value={whatIfPrompt}
+                      onChange={(event) => setWhatIfPrompt(event.target.value)}
+                      placeholder="What if we increase price by 4% for premium segment?"
+                    />
+                    <Button
+                      onClick={() => void handleRunWhatIf()}
+                      disabled={!whatIfPrompt.trim() || isWhatIfLoading}
+                      className="gap-2"
+                    >
+                      <Wand2 className="h-4 w-4" />
+                      {isWhatIfLoading ? 'Simulating...' : 'Simulate'}
+                    </Button>
+                  </div>
+
+                  {whatIfResult && (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">Sample size: {whatIfResult.sample_size} rows</p>
+                      {Object.entries(whatIfResult.matched_filters).length > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Filter: {Object.entries(whatIfResult.matched_filters).map(([key, value]) => `${key}=${value}`).join(', ')}
+                        </p>
+                      )}
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {whatIfResult.projections.map((projection) => (
+                          <Card key={projection.metric} className="border-border/70">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base">{projection.metric}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-1 text-sm">
+                              <p>Baseline: {projection.baseline.toFixed(2)}</p>
+                              <p>Projected: {projection.projected.toFixed(2)}</p>
+                              <p className="text-muted-foreground">
+                                Range: {projection.low.toFixed(2)} to {projection.high.toFixed(2)}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Assumptions</p>
+                        {whatIfResult.assumptions.map((assumption, index) => (
+                          <p key={index} className="text-sm text-muted-foreground">• {assumption}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
