@@ -103,22 +103,40 @@ New endpoint behavior:
 
 ## Environment Variables
 
-Create backend/.env:
+Create `backend/.env` (or copy from `.env.example`):
 
 ```env
+# Database Configuration (Required for history/dashboards)
 DATABASE_URL=postgresql://username:password@host:5432/dbname?sslmode=require
-GEMINI_API_KEY=your_google_api_key
-GEMINI_MODEL=gemini-2.5-flash
+
+# Supabase Storage Configuration (Required for CSV persistence)
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key
 SUPABASE_STORAGE_BUCKET=csv-uploads
+
+# Primary LLM Configuration (e.g., gemini or openrouter)
+LLM_PRIMARY_PROVIDER=gemini
+LLM_FALLBACK_PROVIDER=openrouter
+
+# Google Gemini Settings
+GEMINI_API_KEY=your_google_api_key
+GEMINI_MODEL=gemini-2.5-flash
+
+# OpenRouter / Deepseek Settings
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL=deepseek/deepseek-chat  # Or deepseek/deepseek-r1
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_SITE_URL=https://your-site.com # Optional: for OpenRouter rankings
+OPENROUTER_APP_NAME=Luminous BI # Optional: for OpenRouter rankings
 ```
 
 Notes:
-- DATABASE_URL is required for auth/history/dashboard persistence (e.g. Neon).
-- SUPABASE_URL and SUPABASE_SERVICE_KEY are required for persistent CSV file storage in Supabase.
+- `DATABASE_URL` is required for auth/history/dashboard persistence (e.g. Neon).
+- `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are required for persistent CSV file storage in Supabase.
+- `LLM_PRIMARY_PROVIDER` determines which AI provider to use first (`gemini` or `openrouter`).
+- OpenRouter requires `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (e.g. `deepseek/deepseek-chat` or another model on OpenRouter).
 - Backend normalizes postgres connection details for asyncpg compatibility.
-- If GEMINI_API_KEY is missing or model call fails, backend returns validated fallback analysis.
+- If the AI model call fails, backend returns validated fallback analysis.
 
 Optional frontend/.env:
 
