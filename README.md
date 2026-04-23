@@ -23,7 +23,6 @@ Luminous_BI/
     routes/                API route handlers
     services/              Business logic and integrations
     models/                SQLAlchemy and Pydantic models
-    data/uploads/          Uploaded CSV files (runtime)
 
   frontend/                React + Vite web app
     src/app/pages/         Feature pages
@@ -53,7 +52,7 @@ Frontend:
 
 1. User signs up/signs in and receives a bearer token.
 2. User uploads a CSV file using the upload endpoint.
-3. Backend stores file under backend/data/uploads and returns dataset_id + schema summary.
+3. Backend stores file securely in Supabase Storage and returns dataset_id + schema summary.
 4. User submits a natural-language query with dataset_id.
 5. Backend builds analysis using LLM-assisted logic (Gemini when configured), validates output, and returns:
    - summary
@@ -68,7 +67,7 @@ Frontend:
 
 Important runtime behavior:
 - Uploaded DataFrames are cached in process memory for analysis.
-- Uploaded CSV files are persisted on disk under a user-scoped directory and can be loaded again after backend restart.
+- Uploaded CSV files are persisted in Supabase Storage under a user-scoped prefix and can be loaded seamlessly across backend restarts or serverless deployments.
 - Query Explorer loads the authenticated user's uploaded datasets and allows selecting which CSV to analyze.
 
 ## API Surface
@@ -110,10 +109,14 @@ Create backend/.env:
 DATABASE_URL=postgresql://username:password@host:5432/dbname?sslmode=require
 GEMINI_API_KEY=your_google_api_key
 GEMINI_MODEL=gemini-2.5-flash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key
+SUPABASE_STORAGE_BUCKET=csv-uploads
 ```
 
 Notes:
-- DATABASE_URL is required for auth/history/dashboard persistence.
+- DATABASE_URL is required for auth/history/dashboard persistence (e.g. Neon).
+- SUPABASE_URL and SUPABASE_SERVICE_KEY are required for persistent CSV file storage in Supabase.
 - Backend normalizes postgres connection details for asyncpg compatibility.
 - If GEMINI_API_KEY is missing or model call fails, backend returns validated fallback analysis.
 
