@@ -24,6 +24,9 @@ class Settings(BaseModel):
     )
     openrouter_site_url: str = Field(default_factory=lambda: os.getenv("OPENROUTER_SITE_URL", ""))
     openrouter_app_name: str = Field(default_factory=lambda: os.getenv("OPENROUTER_APP_NAME", "Luminous BI"))
+    supabase_url: str = Field(default_factory=lambda: os.getenv("SUPABASE_URL", ""))
+    supabase_service_key: str = Field(default_factory=lambda: os.getenv("SUPABASE_SERVICE_KEY", ""))
+    supabase_storage_bucket: str = Field(default_factory=lambda: os.getenv("SUPABASE_STORAGE_BUCKET", "csv-uploads"))
     uploads_dir: Path = Field(
         default_factory=lambda: Path(__file__).resolve().parent / "data" / "uploads"
     )

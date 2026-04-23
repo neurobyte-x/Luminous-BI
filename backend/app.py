@@ -28,7 +28,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    settings.uploads_dir.mkdir(parents=True, exist_ok=True)
     try:
         await init_db()
     except Exception as exc:
