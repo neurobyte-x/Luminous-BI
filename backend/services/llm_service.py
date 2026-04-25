@@ -69,7 +69,10 @@ def _call_gemini(prompt: str) -> dict:
 
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel(settings.gemini_model)
-    response = model.generate_content(prompt)
+    response = model.generate_content(
+        prompt,
+        generation_config={"max_output_tokens": settings.gemini_max_output_tokens},
+    )
     response_text = getattr(response, "text", "") or ""
     return _parse_llm_json(response_text)
 
@@ -99,6 +102,7 @@ def _call_openrouter(prompt: str) -> dict:
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
+        max_tokens=settings.openrouter_max_tokens,
         extra_headers=extra_headers or None,
     )
 

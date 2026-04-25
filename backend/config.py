@@ -15,9 +15,15 @@ class Settings(BaseModel):
     llm_fallback_provider: str = Field(default_factory=lambda: os.getenv("LLM_FALLBACK_PROVIDER", "openrouter"))
     gemini_api_key: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
     gemini_model: str = Field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
+    gemini_max_output_tokens: int = Field(
+        default_factory=lambda: int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1024"))
+    )
     openrouter_api_key: str = Field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY", ""))
     openrouter_model: str = Field(
         default_factory=lambda: os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat")
+    )
+    openrouter_max_tokens: int = Field(
+        default_factory=lambda: int(os.getenv("OPENROUTER_MAX_TOKENS", "1024"))
     )
     openrouter_base_url: str = Field(
         default_factory=lambda: os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
