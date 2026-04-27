@@ -37,12 +37,16 @@ class Settings(BaseModel):
         default_factory=lambda: Path(__file__).resolve().parent / "data" / "uploads"
     )
     cors_origins: list[str] = Field(
-        default_factory=lambda: [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-        ]
+        default_factory=lambda: (
+            os.getenv("CORS_ORIGINS", "").split(",")
+            if os.getenv("CORS_ORIGINS")
+            else [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ]
+        )
     )
 
 
