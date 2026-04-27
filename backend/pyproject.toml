@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Backend API for Luminous BI"
 requires-python = ">=3.11,<3.12"
 dependencies = [
-    "fastapi>=0.135.1",
+    "fastapi[standard]>=0.135.1",
     "uvicorn>=0.42.0",
     "pandas==1.5.3",
     "sqlalchemy>=2.0.48",
