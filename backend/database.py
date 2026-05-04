@@ -15,12 +15,12 @@ def _normalize_database_url(raw_url: str) -> str:
 
     query = dict(parsed.query)
 
-    # asyncpg expects `ssl`, while many Neon URLs use `sslmode=require`.
+    
     if parsed.drivername == "postgresql+asyncpg" and "sslmode" in query and "ssl" not in query:
         sslmode = str(query.pop("sslmode"))
         query["ssl"] = "require" if sslmode == "require" else sslmode
 
-    # This parameter is for psycopg and is not supported by asyncpg.
+    
     query.pop("channel_binding", None)
 
     normalized = parsed.set(query=query)
@@ -63,7 +63,7 @@ async def init_db() -> None:
     if engine is None:
         raise RuntimeError("DATABASE_URL is missing. Cannot initialize database.")
 
-    from models import db_models  # noqa: F401
+    from models import db_models
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

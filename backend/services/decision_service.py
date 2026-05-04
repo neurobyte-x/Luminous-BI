@@ -288,7 +288,6 @@ def run_what_if_projection(
         }
     ]
 
-    # Add total impact when relevant.
     if len(scoped) > 1:
         baseline_total = float(scoped[metric].sum())
         projected_total = baseline_total * factor

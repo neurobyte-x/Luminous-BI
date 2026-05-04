@@ -106,11 +106,10 @@ def _build_google_gemini_llm() -> Any:
     for model_name in _gemini_model_candidates():
         original_model = getattr(GoogleGemini, "model", "models/gemini-pro")
         try:
-            # pandasai 2.x initializes the client from class-level model, so set it before init.
+            
             GoogleGemini.model = model_name
             llm = GoogleGemini(api_key=settings.gemini_api_key, model=model_name)
 
-            # Ensure the instance and bound GenerativeModel both use the configured model.
             llm.model = model_name
             genai.configure(api_key=settings.gemini_api_key)
             llm.google_gemini = genai.GenerativeModel(model_name=model_name)

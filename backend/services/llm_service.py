@@ -55,7 +55,7 @@ Rules:
 1) No markdown.
 2) No text outside JSON.
 3) Use dataset column names exactly.
-4) Max 3 charts.
+4) Max 3 charts Dont include Pie Chart.
 5) pandas_prompt must not include OS/system calls.
 6) sql_query must be valid SQL text and should reference a table named uploaded_data.
 """.strip()
